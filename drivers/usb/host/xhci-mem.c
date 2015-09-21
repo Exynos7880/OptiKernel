@@ -1799,7 +1799,6 @@ void xhci_mem_cleanup(struct xhci_hcd *xhci)
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	cancel_delayed_work_sync(&xhci->cmd_timer);
 #else
-	if (timer_pending(&xhci->cmd_timer))
 		del_timer_sync(&xhci->cmd_timer);
 #endif
 
