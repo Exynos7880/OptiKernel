@@ -147,7 +147,8 @@ static int xhci_start(struct xhci_hcd *xhci)
 				"waited %u microseconds.\n",
 				XHCI_MAX_HALT_USEC);
 	if (!ret)
-		xhci->xhc_state &= ~(XHCI_STATE_HALTED | XHCI_STATE_DYING);
+		/* clear state flags. Including dying, halted or removing */
+		xhci->xhc_state = 0;
 
 	return ret;
 }
@@ -3841,7 +3842,7 @@ static int xhci_setup_device(struct usb_hcd *hcd, struct usb_device *udev,
 	u64 temp_64;
 	struct xhci_command *command;
 
-	if (xhci->xhc_state)	/* dying or halted */
+	if (xhci->xhc_state)	/* dying, removing or halted */
 		return -EINVAL;
 
 	if (!udev->slot_id) {
