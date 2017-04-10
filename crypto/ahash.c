@@ -86,6 +86,11 @@ int crypto_hash_walk_done(struct crypto_hash_walk *walk, int err)
 	unsigned int alignmask = walk->alignmask;
 	unsigned int nbytes = walk->entrylen;
 
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
+
 	walk->data -= walk->offset;
 
 	if (nbytes && walk->offset & alignmask && !err) {
@@ -131,6 +136,12 @@ EXPORT_SYMBOL_GPL(crypto_hash_walk_done);
 int crypto_hash_walk_first(struct ahash_request *req,
 			   struct crypto_hash_walk *walk)
 {
+
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
+
 	walk->total = req->nbytes;
 
 	if (!walk->total) {
@@ -171,6 +182,11 @@ int crypto_hash_walk_first_compat(struct hash_desc *hdesc,
 				  struct crypto_hash_walk *walk,
 				  struct scatterlist *sg, unsigned int len)
 {
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
+
 	walk->total = len;
 
 	if (!walk->total) {
@@ -296,8 +312,9 @@ static void ahash_restore_req(struct ahash_request *req, int err)
 
 	/* Restore the original crypto request. */
 	req->result = priv->result;
+
 	ahash_request_set_callback(req, priv->flags,
-							   priv->complete, priv->data);
+				   priv->complete, priv->data);
 	req->priv = NULL;
 
 	/* Free the req->priv.priv from the ADJUSTED request. */
@@ -319,8 +336,8 @@ static void ahash_op_unaligned_done(struct crypto_async_request *req, int err)
 	struct ahash_request *areq = req->data;
 
 	if (err == -EINPROGRESS) {
-			ahash_notify_einprogress(areq);
-			return;
+		ahash_notify_einprogress(areq);
+		return;
 	}
 
 	/*
@@ -350,9 +367,9 @@ static int ahash_op_unaligned(struct ahash_request *req,
 
 	err = op(req);
 	if (err == -EINPROGRESS ||
-		(err == -EBUSY && (ahash_request_flags(req) &
-						   CRYPTO_TFM_REQ_MAY_BACKLOG)))
-			return err;
+	    (err == -EBUSY && (ahash_request_flags(req) &
+			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
+		return err;
 
 	ahash_restore_req(req, err);
 
@@ -364,6 +381,11 @@ static int crypto_ahash_op(struct ahash_request *req,
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	unsigned long alignmask = crypto_ahash_alignmask(tfm);
+
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
 
 	if ((unsigned long)req->result & alignmask)
 		return ahash_op_unaligned(req, op);
@@ -410,9 +432,9 @@ static int ahash_def_finup_finish1(struct ahash_request *req, int err)
 
 	err = crypto_ahash_reqtfm(req)->final(req);
 	if (err == -EINPROGRESS ||
-		(err == -EBUSY && (ahash_request_flags(req) &
-						   CRYPTO_TFM_REQ_MAY_BACKLOG)))
-			return err;
+	    (err == -EBUSY && (ahash_request_flags(req) &
+			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
+		return err;
 
 out:
 	ahash_restore_req(req, err);
@@ -424,15 +446,15 @@ static void ahash_def_finup_done1(struct crypto_async_request *req, int err)
 	struct ahash_request *areq = req->data;
 
 	if (err == -EINPROGRESS) {
-			ahash_notify_einprogress(areq);
-			return;
+		ahash_notify_einprogress(areq);
+		return;
 	}
 
 	areq->base.flags &= ~CRYPTO_TFM_REQ_MAY_SLEEP;
 
 	err = ahash_def_finup_finish1(areq, err);
 	if (areq->priv)
-			return;
+		return;
 
 	areq->base.complete(&areq->base, err);
 }
@@ -448,9 +470,9 @@ static int ahash_def_finup(struct ahash_request *req)
 
 	err = tfm->update(req);
 	if (err == -EINPROGRESS ||
-		(err == -EBUSY && (ahash_request_flags(req) &
-						   CRYPTO_TFM_REQ_MAY_BACKLOG)))
-			return err;
+	    (err == -EBUSY && (ahash_request_flags(req) &
+			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
+		return err;
 
 	return ahash_def_finup_finish1(req, err);
 }
@@ -469,6 +491,11 @@ static int crypto_ahash_init_tfm(struct crypto_tfm *tfm)
 {
 	struct crypto_ahash *hash = __crypto_ahash_cast(tfm);
 	struct ahash_alg *alg = crypto_ahash_alg(hash);
+
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
 
 	hash->setkey = ahash_nosetkey;
 	hash->has_setkey = false;
@@ -601,6 +628,11 @@ int ahash_register_instance(struct crypto_template *tmpl,
 			    struct ahash_instance *inst)
 {
 	int err;
+
+#ifdef CONFIG_CRYPTO_FIPS
+	if (unlikely(in_fips_err()))
+		return -EACCES;
+#endif
 
 	err = ahash_prepare_alg(&inst->alg);
 	if (err)
