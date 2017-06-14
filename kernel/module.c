@@ -1269,17 +1269,6 @@ static int try_to_force_load(struct module *mod, const char *reason)
 }
 
 #ifdef CONFIG_MODVERSIONS
-/* If the arch applies (non-zero) relocations to kernel kcrctab, unapply it. */
-static unsigned long maybe_relocated(unsigned long crc,
-				     const struct module *crc_owner)
-{
-#ifdef ARCH_RELOCATES_KCRCTAB
-	if (crc_owner == NULL)
-		return crc - (unsigned long)reloc_start;
-#endif
-	return crc;
-}
-
 static int check_version(Elf_Shdr *sechdrs,
 			 unsigned int versindex,
 			 const char *symname,
@@ -1287,55 +1276,14 @@ static int check_version(Elf_Shdr *sechdrs,
 			 const unsigned long *crc,
 			 const struct module *crc_owner)
 {
-	unsigned int i, num_versions;
-	struct modversion_info *versions;
-
-	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
-	if (!crc)
-		return 1;
-
-	/* No versions at all?  modprobe --force does this. */
-	if (versindex == 0)
-		return try_to_force_load(mod, symname) == 0;
-
-	versions = (void *) sechdrs[versindex].sh_addr;
-	num_versions = sechdrs[versindex].sh_size
-		/ sizeof(struct modversion_info);
-
-	for (i = 0; i < num_versions; i++) {
-		if (strcmp(versions[i].name, symname) != 0)
-			continue;
-
-		if (versions[i].crc == maybe_relocated(*crc, crc_owner))
-			return 1;
-		pr_debug("Found checksum %lX vs module %lX\n",
-		       maybe_relocated(*crc, crc_owner), versions[i].crc);
-		goto bad_version;
-	}
-
-	pr_warn("%s: no symbol version for %s\n", mod->name, symname);
-	return 0;
-
-bad_version:
-	printk("%s: disagrees about version of symbol %s\n",
-	       mod->name, symname);
-	return 0;
+	return 1;
 }
 
 static inline int check_modstruct_version(Elf_Shdr *sechdrs,
 					  unsigned int versindex,
 					  struct module *mod)
 {
-	const unsigned long *crc;
-
-	/* Since this should be found in kernel (which can't be removed),
-	 * no locking is necessary. */
-	if (!find_symbol(VMLINUX_SYMBOL_STR(module_layout), NULL,
-			 &crc, true, false))
-		BUG();
-	return check_version(sechdrs, versindex,
-			     VMLINUX_SYMBOL_STR(module_layout), mod, crc,
-			     NULL);
+	return 1;
 }
 
 /* First part is kernel version, which we ignore if module has crcs. */
