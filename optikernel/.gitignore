@@ -1,0 +1,6 @@
+*.log
+.build_kernel.log.swp
+*v*.zip
+*/ramdisk-new.cpio.gz
+*/boot.img
+*/anykernel2.zip

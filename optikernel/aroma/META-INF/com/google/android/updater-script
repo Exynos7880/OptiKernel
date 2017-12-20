@@ -1,0 +1,198 @@
+# -------------------------------
+# Optikernel AROMA INSTALLER v3.0
+# aroma-config portion
+#
+# Created by djb77 from XDA 
+# DO NOT USE ANY PORTION OF THIS
+# CODE WITHOUT HIS PERMISSION!!
+#
+# Modified by GhaithCraft to support Optikernel
+# -------------------------------
+
+ui_print("@Setting up");
+set_progress(0.0);
+
+# MOUNT PARTITIONS
+# ----------------
+ui_print("- Mounting Partitions");
+if is_mounted("/system") == "/system" then
+    assert(run_program("/sbin/busybox", "umount", "/system"));
+endif;
+if is_mounted("/data") == "/data" then
+    assert(run_program("/sbin/busybox", "umount", "/data"));
+endif;
+run_program("/sbin/mount", "/system");
+run_program("/sbin/mount", "/data");
+
+# BACKUP CONFIG
+# -------------
+if file_getprop("/tmp/aroma/Optikernel-backup.prop","install") == "1"
+then
+	ui_print("- Backing up Config");
+	run_program("/tmp/aroma/backup.sh");
+endif;
+
+# RESTORE CONFIG
+# --------------
+if file_getprop("/tmp/aroma/Optikernel-restore.prop","install") == "1"
+then
+	ui_print("- Restoring Config");
+	run_program("/tmp/aroma/restore.sh");
+endif;
+
+# WIPE MAGISK / SUPERSU
+# ---------------------
+if file_getprop("/tmp/aroma/wipe.prop","install") == "1"
+then
+	ui_print("- Clearing old Magisk / SuperSU Installs");
+	run_program("/tmp/aroma/wipe.sh");
+endif;
+
+set_progress(0.10);
+
+# FLASH KERNEL
+# ------------
+ui_print(" ");
+ui_print("@Flashing Optikernel");
+package_extract_file("boot.img", "/dev/block/platform/13540000.dwmmc0/by-name/BOOT");
+
+set_progress(0.35);
+
+# INSTALL SYSTEM PATCHES
+# ----------------------
+ui_print("@Patching System");
+delete("/system/app/mcRegistry/ffffffffd0000000000000000000000a.tlbin");
+delete("/system/vendor/lib/libsecure_storage.so");
+delete("/system/vendor/lib64/libsecure_storage.so");
+package_extract_dir("Optikernel/system", "/system");
+delete("/system/etc/init.d/placeholder");
+ui_print(" ");
+
+set_progress(0.40);
+
+# INSTALL AKM
+# ---------------
+if file_getprop("/tmp/aroma/okm.prop","install") == "1"
+then
+	ui_print("@Installing Optikernel Manager App");
+	delete_recursive("/system/app/com.Ghaith.okm*");
+	delete_recursive("/system/priv-app/com.Ghaith.okm*");
+	delete_recursive("/data/app/com.Ghaith.okm*");
+	delete_recursive("/data/data/com.Ghaith.okm*");
+	package_extract_dir("Optikernel/apps/com.Ghaith.okm-2", "/data/app/com.Ghaith.okm-2");
+endif;
+
+set_progress(0.45);
+
+set_progress(0.49);
+
+# PERMISSIONS
+# -----------
+ui_print(" ");
+ui_print("@Setting System Permissions");
+set_metadata("/system/etc/sysconfig/google.xml", "uid", 0, "gid", 0, "mode", 0644, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata_recursive("/system/etc/init.d", "uid", 0, "gid", 2000, "dmode", 0755, "fmode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata("/system/vendor/lib/libsecure_storage.so", "uid", 0, "gid", 0, "mode", 0644, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+set_metadata_recursive("/system/xbin", "uid", 0, "gid", 2000, "dmode", 0755, "fmode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
+
+set_progress(0.50);
+
+# RAMDISK PATCHES
+# ---------------
+ui_print(" ");
+ui_print("@Patching Ramdisk");
+package_extract_dir("Optikernel/anykernel2", "/tmp/ak2");
+set_perm_recursive(0, 0, 0777, 0777, "/tmp/ak2");
+run_program("/sbin/busybox", "unzip", "/tmp/ak2/anykernel2.zip", "META-INF/com/google/android/*", "-d", "/tmp/ak2");
+run_program("/sbin/sh", "/tmp/ak2/META-INF/com/google/android/update-binary", "dummy", "1", "/tmp/ak2/anykernel2.zip");
+delete_recursive("/tmp/ak2");
+
+set_progress(0.60);
+
+# INSTALL SUPERSU
+# ---------------
+if file_getprop("/tmp/aroma/supersu.prop","install") == "1"
+then
+	ui_print(" ");
+	ui_print("@Installing SuperSU");
+	package_extract_dir("Optikernel/supersu", "/tmp/supersu");
+	set_perm_recursive(0, 0, 0777, 0777, "/tmp/supersu");
+	run_program("/sbin/busybox", "unzip", "/tmp/supersu/supersu.zip", "META-INF/com/google/android/*", "-d", "/tmp/supersu");
+	run_program("/sbin/sh", "/tmp/supersu/META-INF/com/google/android/update-binary", "dummy", "1", "/tmp/supersu/supersu.zip");
+	delete_recursive("/tmp/supersu");
+	run_program("/tmp/aroma/supersu.sh");
+	run_program("/sbin/sync");
+	if is_mounted("/system") == "/system" then
+	    assert(run_program("/sbin/busybox", "umount", "/system"));
+	endif;
+	if is_mounted("/data") == "/data" then
+	    assert(run_program("/sbin/busybox", "umount", "/data"));
+	endif;
+	if is_mounted("/cache") == "/cache" then
+	    assert(run_program("/sbin/busybox", "umount", "/cache"));
+	endif;
+endif;
+
+set_progress(0.70);
+
+# INSTALL MAGISK
+# --------------
+if file_getprop("/tmp/aroma/magisk.prop","install") == "1"
+then
+	ui_print(" ");
+	ui_print("@Installing Magisk");
+	package_extract_dir("Optikernel/magisk", "/tmp/magisk");
+	set_perm_recursive(0, 0, 0777, 0777, "/tmp/magisk");
+	run_program("/sbin/busybox", "unzip", "/tmp/magisk/magisk.zip", "META-INF/com/google/android/*", "-d", "/tmp/magisk");
+	run_program("/sbin/sh", "/tmp/magisk/META-INF/com/google/android/update-binary", "dummy", "1", "/tmp/magisk/magisk.zip");
+	delete_recursive("/tmp/magisk");
+	run_program("/sbin/sync");
+	if is_mounted("/system") == "/system" then
+	    assert(run_program("/sbin/busybox", "umount", "/system"));
+	endif;
+	if is_mounted("/data") == "/data" then
+	    assert(run_program("/sbin/busybox", "umount", "/data"));
+	endif;
+	if is_mounted("/cache") == "/cache" then
+	    assert(run_program("/sbin/busybox", "umount", "/cache"));
+	endif;
+endif;
+
+set_progress(0.80);
+
+# INSTALL BUSYBOX
+# ---------------
+if file_getprop("/tmp/aroma/busybox.prop","install") == "1"
+then
+	ui_print(" ");
+	ui_print("@Installing Busybox");
+	package_extract_dir("Optikernel/busybox", "/tmp/bb");
+	set_perm_recursive(0, 0, 0777, 0777, "/tmp/bb");
+	run_program("/sbin/busybox", "unzip", "/tmp/bb/busybox.zip", "META-INF/com/google/android/*", "-d", "/tmp/bb");
+	run_program("/sbin/busybox", "sh", "/tmp/bb/META-INF/com/google/android/update-binary", "dummy", "1", "/tmp/bb/busybox.zip");
+	delete_recursive("/tmp/bb");
+	run_program("/sbin/sync");
+	if is_mounted("/system") == "/system" then
+	    assert(run_program("/sbin/busybox", "umount", "/system"));
+	endif;
+	if is_mounted("/data") == "/data" then
+	    assert(run_program("/sbin/busybox", "umount", "/data"));
+	endif;
+	if is_mounted("/cache") == "/cache" then
+	    assert(run_program("/sbin/busybox", "umount", "/cache"));
+	endif;
+endif;
+
+set_progress(0.90);
+
+# FINISH
+# ------
+ui_print(" ");
+ui_print("@Unmounting Partitions");
+ifelse(is_mounted("/system"), unmount("/system"));
+
+ui_print(" ");
+ui_print("@Installation Complete");
+
+set_progress(1);
+
