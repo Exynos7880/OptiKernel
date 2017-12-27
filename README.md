@@ -23,9 +23,9 @@ Adjust the toolchain path in build.sh and Makefile to match the path on your sys
 
 Run build.sh with the following options, doesn't matter what order keep and silent are in.
 
--	./build.sh 0  will perform Clean Workspace
--	./build.sh 1  will perform Build FlashKernel boot.img + zip for A7 2017
--	./build.sh 2  will perform Build FlashKernel boot.img + zip for A5 2017
+-	**./build.sh 0** will perform Clean Workspace
+-	**./build.sh 1** will perform Build FlashKernel boot.img + zip for A7 2017
+-	**./build.sh 2** will perform Build FlashKernel boot.img + zip for A5 2017
 
 When finished, the new files and logs will be created in the output directory.
 
