@@ -12,7 +12,7 @@ KERNEL_NAME='OptiKernel'
 ARCHITECTURE=arm64
 TOOLCHAIN=/home/ghaith/android/Toolchains/UBERTC-aarch64-linux-android-6.0-kernel-2e6398ac9e86/bin/aarch64-linux-android-
 ANDROID=N
-BUILD_DIR=$ROOT_DIR/Optikernel
+BUILD_DIR=$ROOT_DIR/optikernel
 ZIP_DIR=$BUILD_DIR/zip
 AIK_DIR=$BUILD_DIR/Android-Image-Kitchen
 RAMDISK_DIR=$BUILD_DIR/ramdisk
@@ -24,14 +24,14 @@ RAMDISK_DIR=$BUILD_DIR/ramdisk
 a7_2017() #Device 1
 {
 	DEVICE='A7_2017'
-	DEFCONFIG=Optkernel_Kernel_a7y17lte_defconfig
+	DEFCONFIG=Optkernel_a7y17lte_defconfig
 	DTSFILES="exynos7880-a7y17lte_eur_open_00 exynos7880-a7y17lte_eur_open_01"
 }
 
 a5_2017()  #Device 2
 {
 	DEVICE='A5_2017'
-	DEFCONFIG=Optkernel_Kernel_a5y17lte_defconfig
+	DEFCONFIG=Optkernel_a5y17lte_defconfig
 	DTSFILES="exynos7880-a5y17lte_eur_open_00 exynos7880-a5y17lte_eur_open_01"
 }
 
