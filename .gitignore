@@ -68,6 +68,7 @@ scripts/mod/modpost
 scripts/selinux/genheaders/genheaders
 scripts/selinux/mdp/mdp
 scripts/sortextable
+<<<<<<< HEAD
 security/selinux_n/av_permissions.h
 security/selinux_n/flask.h
 usr/.initramfs_data.cpio.d
@@ -81,3 +82,15 @@ b
 optikernel/
 
 
+=======
+.config
+.version
+Module.symvers
+arch/arm64/include/generated/
+boot.img-dtb
+rf-tools/out/boot_J530F.img
+dmesg.sh
+drivers/leds/.tmp_led-class.ver
+rf-tools/out/
+drivers/leds/.tmp_led-class.ver
+>>>>>>> cc99896718... boeffla_wl_blocker: add generic wakelock blocker driver v1.0.0--v1.1.0
