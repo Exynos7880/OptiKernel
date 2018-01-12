@@ -374,11 +374,6 @@ CONFIG_SMP=y
 # CONFIG_DISABLE_CPU_SCHED_DOMAIN_BALANCE is not set
 CONFIG_NR_CPUS=8
 CONFIG_HOTPLUG_CPU=y
-<<<<<<< HEAD
-=======
-# CONFIG_THUNDERPLUG_CONTROL is not set
-# CONFIG_STATE_NOTIFIER is not set
->>>>>>> e4c7fdacc8... defconfig: disable ThunderPlug&State Notifier
 # CONFIG_PREEMPT_NONE is not set
 # CONFIG_PREEMPT_VOLUNTARY is not set
 CONFIG_PREEMPT=y
