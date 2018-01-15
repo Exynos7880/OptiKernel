@@ -427,6 +427,10 @@ static unsigned long long mmc_merge_ext_csd(u8 *ext_csd, bool continuous, int co
 	return merge_ext_csd;
 }
 
+/* Minimum partition switch timeout in milliseconds */
+#define MMC_MIN_PART_SWITCH_TIME	300
+
+
 /*
  * Decode extended CSD.
  */
@@ -489,6 +493,10 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 
 		/* EXT_CSD value is in units of 10ms, but we store in ms */
 		card->ext_csd.part_time = 10 * ext_csd[EXT_CSD_PART_SWITCH_TIME];
+		/* Some eMMC set the value too low so set a minimum */
+		if (card->ext_csd.part_time &&
+		    card->ext_csd.part_time < MMC_MIN_PART_SWITCH_TIME)
+			card->ext_csd.part_time = MMC_MIN_PART_SWITCH_TIME;
 
 		/* Sleep / awake timeout in 100ns units */
 		if (sa_shift > 0 && sa_shift <= 0x17)
@@ -667,7 +675,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	} else {
 		card->ext_csd.data_sector_size = 512;
 	}
-
+	/* eMMC v5.0 or later */
 	if (card->ext_csd.rev >= 7) {
 		if (card->cid.manfid == 0x15 &&
 				ext_csd[EXT_CSD_PRE_EOL_INFO] == 0x0 &&
@@ -804,8 +812,8 @@ static char *mmc_gen_unique_number(struct mmc_card *card)
 		case 0x90:	/* Hynix */
 			sprintf(gen_pnm, "%.*s", 2, card->cid.prod_name + 1);
 			break;
-		case 0x13:	/* Micron 	-> [4][5] */
-			0xFE:
+		case 0x13:
+		case 0xFE:	/* Micron 	-> [4][5] */
 			sprintf(gen_pnm, "%.*s", 2, card->cid.prod_name + 4);
 			break;
 		case 0x15:	/* Samsung 	-> [0][1] */
@@ -1235,7 +1243,6 @@ static int mmc_select_hs400(struct mmc_card *card)
 				mmc_hostname(host), err);
 			return err;
 		}
-
 		mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
 		mmc_set_bus_speed(card);
 
@@ -1969,8 +1976,7 @@ static int mmc_shutdown(struct mmc_host *host)
 
 	if (!err) {
 		err = _mmc_suspend(host, false);
-
-		if (host->ops->shutdown && (host->caps2 & MMC_CAP2_PWR_SHUT_DOWN))
+		if (host->ops->shutdown && !err)
 			host->ops->shutdown(host);
 	}
 
