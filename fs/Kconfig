@@ -270,11 +270,21 @@ source "fs/cifs/Kconfig"
 source "fs/ncpfs/Kconfig"
 source "fs/coda/Kconfig"
 source "fs/afs/Kconfig"
-source "fs/9p/Kconfig"
+source "fs/9p/Kconfig"	
 
 endif # NETWORK_FILESYSTEMS
 
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
+
+config ASYNC_FSYNC
+	bool "asynchronous fsync"
+	default y
+
+config DYNAMIC_FSYNC
+	bool "dynamic file sync control"
+	default y
+	help
+	  An experimental file sync control using new power_suspend driver 	  
 
 endmenu

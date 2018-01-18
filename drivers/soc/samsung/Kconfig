@@ -53,8 +53,29 @@ config EXYNOS_HOTPLUG_GOVERNOR
 	bool "Enable Exynos dynamic hotplug governor"
 	select SCHED_AVG_NR_RUNNING
 
-config EXYNOS_PM_DVS
-	bool "Enable Exynos dynamic voltage setting"
+config EXYNOS_MCINFO
+	bool "Exynos memory controller information"
 	default n
 
+config MCINFO_SYSFS
+	bool "Exynos memory controller information sysfs"
+	depends on EXYNOS_MCINFO
+	default	y if SYSFS
+
+config STATE_NOTIFIER
+        bool "State Notifier"
+
+config THUNDERPLUG_CONTROL
+	bool "Enable plugging down/up of cores based on load per core"
+	depends on SMP && HOTPLUG_CPU
+	default n
+	help
+	  This driver hotplugs cpu cores based on per-core load
+
 endif #SOC_SAMSUNG
+
+config SEC_INCELL
+	bool "Incell data & function for Samsung"
+	default n
+	help
+	  say y to enable incell data & function for Samsung.
