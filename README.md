@@ -11,7 +11,7 @@ variants, but capable of running A5/A7 2017 and Ported Firmwares.
 Currently supporting A7/A5 2017 / S8 Port / NFE ROMS But N8 Port Coming Soon.
 
 
-* XDA A7/A5 2017 Forum: Coming Soon ...
+* XDA A7/A5 2017 Forum: https://forum.xda-developers.com/samsung-a-series-2017/development/kernel-optikernel-1-t3737598
 
 
 Compiled using my own built custom toolchain
