@@ -375,9 +375,7 @@ int platform_device_add(struct platform_device *pdev)
 
 	while (--i >= 0) {
 		struct resource *r = &pdev->resource[i];
-		unsigned long type = resource_type(r);
-
-		if (type == IORESOURCE_MEM || type == IORESOURCE_IO)
+		if (r->parent)
 			release_resource(r);
 	}
 
@@ -408,9 +406,7 @@ void platform_device_del(struct platform_device *pdev)
 
 		for (i = 0; i < pdev->num_resources; i++) {
 			struct resource *r = &pdev->resource[i];
-			unsigned long type = resource_type(r);
-
-			if (type == IORESOURCE_MEM || type == IORESOURCE_IO)
+			if (r->parent)
 				release_resource(r);
 		}
 	}
@@ -733,7 +729,8 @@ static ssize_t driver_override_store(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 	char *driver_override, *old, *cp;
 
-	if (count > PATH_MAX)
+	/* We need to keep extra room for a newline */
+	if (count >= (PAGE_SIZE - 1))
 		return -EINVAL;
 
 	driver_override = kstrndup(buf, count, GFP_KERNEL);

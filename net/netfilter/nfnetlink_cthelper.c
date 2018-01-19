@@ -77,6 +77,9 @@ nfnl_cthelper_parse_tuple(struct nf_conntrack_tuple *tuple,
 	if (!tb[NFCTH_TUPLE_L3PROTONUM] || !tb[NFCTH_TUPLE_L4PROTONUM])
 		return -EINVAL;
 
+	/* Not all fields are initialized so first zero the tuple */
+	memset(tuple, 0, sizeof(struct nf_conntrack_tuple));
+
 	tuple->src.l3num = ntohs(nla_get_be16(tb[NFCTH_TUPLE_L3PROTONUM]));
 	tuple->dst.protonum = nla_get_u8(tb[NFCTH_TUPLE_L4PROTONUM]);
 
@@ -86,7 +89,7 @@ nfnl_cthelper_parse_tuple(struct nf_conntrack_tuple *tuple,
 static int
 nfnl_cthelper_from_nlattr(struct nlattr *attr, struct nf_conn *ct)
 {
-	const struct nf_conn_help *help = nfct_help(ct);
+	struct nf_conn_help *help = nfct_help(ct);
 
 	if (attr == NULL)
 		return -EINVAL;
@@ -94,7 +97,7 @@ nfnl_cthelper_from_nlattr(struct nlattr *attr, struct nf_conn *ct)
 	if (help->helper->data_len == 0)
 		return -EINVAL;
 
-	memcpy(&help->data, nla_data(attr), help->helper->data_len);
+	memcpy(help->data, nla_data(attr), help->helper->data_len);
 	return 0;
 }
 
@@ -158,6 +161,7 @@ nfnl_cthelper_parse_expect_policy(struct nf_conntrack_helper *helper,
 	int i, ret;
 	struct nf_conntrack_expect_policy *expect_policy;
 	struct nlattr *tb[NFCTH_POLICY_SET_MAX+1];
+	unsigned int class_max;
 
 	ret = nla_parse_nested(tb, NFCTH_POLICY_SET_MAX, attr,
 			       nfnl_cthelper_expect_policy_set);
@@ -167,19 +171,18 @@ nfnl_cthelper_parse_expect_policy(struct nf_conntrack_helper *helper,
 	if (!tb[NFCTH_POLICY_SET_NUM])
 		return -EINVAL;
 
-	helper->expect_class_max =
-		ntohl(nla_get_be32(tb[NFCTH_POLICY_SET_NUM]));
-
-	if (helper->expect_class_max != 0 &&
-	    helper->expect_class_max > NF_CT_MAX_EXPECT_CLASSES)
+	class_max = ntohl(nla_get_be32(tb[NFCTH_POLICY_SET_NUM]));
+	if (class_max == 0)
+		return -EINVAL;
+	if (class_max > NF_CT_MAX_EXPECT_CLASSES)
 		return -EOVERFLOW;
 
 	expect_policy = kzalloc(sizeof(struct nf_conntrack_expect_policy) *
-				helper->expect_class_max, GFP_KERNEL);
+				class_max, GFP_KERNEL);
 	if (expect_policy == NULL)
 		return -ENOMEM;
 
-	for (i=0; i<helper->expect_class_max; i++) {
+	for (i = 0; i < class_max; i++) {
 		if (!tb[NFCTH_POLICY_SET+i])
 			goto err;
 
@@ -188,6 +191,8 @@ nfnl_cthelper_parse_expect_policy(struct nf_conntrack_helper *helper,
 		if (ret < 0)
 			goto err;
 	}
+
+	helper->expect_class_max = class_max - 1;
 	helper->expect_policy = expect_policy;
 	return 0;
 err:
@@ -374,10 +379,10 @@ nfnl_cthelper_dump_policy(struct sk_buff *skb,
 		goto nla_put_failure;
 
 	if (nla_put_be32(skb, NFCTH_POLICY_SET_NUM,
-			 htonl(helper->expect_class_max)))
+			 htonl(helper->expect_class_max + 1)))
 		goto nla_put_failure;
 
-	for (i=0; i<helper->expect_class_max; i++) {
+	for (i = 0; i < helper->expect_class_max + 1; i++) {
 		nest_parms2 = nla_nest_start(skb,
 				(NFCTH_POLICY_SET+i) | NLA_F_NESTED);
 		if (nest_parms2 == NULL)

@@ -290,6 +290,7 @@ config CRYPTO_XTS
 	select CRYPTO_BLKCIPHER
 	select CRYPTO_MANAGER
 	select CRYPTO_GF128MUL
+	select CRYPTO_ECB
 	help
 	  XTS: IEEE1619/D16 narrow block cipher use with aes-xts-plain,
 	  key size 256, 384 or 512 bits. This implementation currently
@@ -1426,6 +1427,7 @@ config CRYPTO_LZ4
 	select CRYPTO_ALGAPI
 	select LZ4_COMPRESS
 	select LZ4_DECOMPRESS
+	default y
 	help
 	  This is the LZ4 algorithm.
 

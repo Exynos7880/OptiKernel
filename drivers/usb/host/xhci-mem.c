@@ -1431,10 +1431,10 @@ int xhci_endpoint_init(struct xhci_hcd *xhci,
 		/* Attempt to use the ring cache */
 		if (virt_dev->num_rings_cached == 0)
 			return -ENOMEM;
+		virt_dev->num_rings_cached--;
 		virt_dev->eps[ep_index].new_ring =
 			virt_dev->ring_cache[virt_dev->num_rings_cached];
 		virt_dev->ring_cache[virt_dev->num_rings_cached] = NULL;
-		virt_dev->num_rings_cached--;
 		xhci_reinit_cached_ring(xhci, virt_dev->eps[ep_index].new_ring,
 					1, type);
 	}
@@ -1502,10 +1502,10 @@ int xhci_endpoint_init(struct xhci_hcd *xhci,
 	 * use Event Data TRBs, and we don't chain in a link TRB on short
 	 * transfers, we're basically dividing by 1.
 	 *
-	 * xHCI 1.0 specification indicates that the Average TRB Length should
-	 * be set to 8 for control endpoints.
+	 * xHCI 1.0 and 1.1 specification indicates that the Average TRB Length
+	 * should be set to 8 for control endpoints.
 	 */
-	if (usb_endpoint_xfer_control(&ep->desc) && xhci->hci_version == 0x100)
+	if (usb_endpoint_xfer_control(&ep->desc) && xhci->hci_version >= 0x100)
 		ep_ctx->tx_info |= cpu_to_le32(AVG_TRB_LENGTH_FOR_EP(8));
 	else
 		ep_ctx->tx_info |=
@@ -1676,7 +1676,7 @@ static int scratchpad_alloc(struct xhci_hcd *xhci, gfp_t flags)
 	xhci->dcbaa->dev_context_ptrs[0] = cpu_to_le64(xhci->scratchpad->sp_dma);
 	for (i = 0; i < num_sp; i++) {
 		dma_addr_t dma;
-		void *buf = dma_alloc_coherent(dev, xhci->page_size, &dma,
+		void *buf = dma_zalloc_coherent(dev, xhci->page_size, &dma,
 				flags);
 		if (!buf)
 			goto fail_sp5;
@@ -1799,7 +1799,7 @@ void xhci_mem_cleanup(struct xhci_hcd *xhci)
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	cancel_delayed_work_sync(&xhci->cmd_timer);
 #else
-	del_timer_sync(&xhci->cmd_timer);
+		del_timer_sync(&xhci->cmd_timer);
 #endif
 
 	/* Free the Event Ring Segment Table and the actual Event Ring */
@@ -1886,6 +1886,12 @@ no_bw:
 	kfree(xhci->port_array);
 	kfree(xhci->rh_bw);
 	kfree(xhci->ext_caps);
+
+	xhci->usb2_ports = NULL;
+	xhci->usb3_ports = NULL;
+	xhci->port_array = NULL;
+	xhci->rh_bw = NULL;
+	xhci->ext_caps = NULL;
 
 	xhci->page_size = 0;
 	xhci->page_shift = 0;
@@ -2457,7 +2463,7 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 		(xhci->cmd_ring->first_seg->dma & (u64) ~CMD_RING_RSVD_BITS) |
 		xhci->cmd_ring->cycle_state;
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init,
-			"// Setting command ring address to 0x%x", val);
+			"// Setting command ring address to 0x%016llx", val_64);
 	xhci_write_64(xhci, val_64, &xhci->op_regs->cmd_ring);
 	xhci_dbg_cmd_ptrs(xhci);
 

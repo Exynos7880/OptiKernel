@@ -50,6 +50,7 @@
 #define CONTEXT_SIZE		VTD_PAGE_SIZE
 
 #define IS_GFX_DEVICE(pdev) ((pdev->class >> 16) == PCI_BASE_CLASS_DISPLAY)
+#define IS_USB_DEVICE(pdev) ((pdev->class >> 8) == PCI_CLASS_SERIAL_USB)
 #define IS_ISA_DEVICE(pdev) ((pdev->class >> 8) == PCI_CLASS_BRIDGE_ISA)
 #define IS_AZALIA(pdev) ((pdev)->vendor == 0x8086 && (pdev)->device == 0x3a3e)
 
@@ -695,7 +696,13 @@ static struct intel_iommu *device_to_iommu(struct device *dev, u8 *bus, u8 *devf
 	int i;
 
 	if (dev_is_pci(dev)) {
+		struct pci_dev *pf_pdev;
+
 		pdev = to_pci_dev(dev);
+		/* VFs aren't listed in scope tables; we need to look up
+		 * the PF instead to find the IOMMU. */
+		pf_pdev = pci_physfn(pdev);
+		dev = &pf_pdev->dev;
 		segment = pci_domain_nr(pdev->bus);
 	} else if (ACPI_COMPANION(dev))
 		dev = &ACPI_COMPANION(dev)->dev;
@@ -708,6 +715,13 @@ static struct intel_iommu *device_to_iommu(struct device *dev, u8 *bus, u8 *devf
 		for_each_active_dev_scope(drhd->devices,
 					  drhd->devices_cnt, i, tmp) {
 			if (tmp == dev) {
+				/* For a VF use its original BDF# not that of the PF
+				 * which we used for the IOMMU lookup. Strictly speaking
+				 * we could do this for all PCI devices; we only need to
+				 * get the BDF# from the scope table for ACPI matches. */
+				if (pdev && pdev->is_virtfn)
+					goto got_pdev;
+
 				*bus = drhd->devices[i].bus;
 				*devfn = drhd->devices[i].devfn;
 				goto out;
@@ -966,7 +980,7 @@ static void dma_pte_free_level(struct dmar_domain *domain, int level,
 		if (!dma_pte_present(pte) || dma_pte_superpage(pte))
 			goto next;
 
-		level_pfn = pfn & level_mask(level - 1);
+		level_pfn = pfn & level_mask(level);
 		level_pte = phys_to_virt(dma_pte_addr(pte));
 
 		if (level > 2)
@@ -1745,7 +1759,6 @@ static int domain_init(struct dmar_domain *domain, int guest_width)
 
 static void domain_exit(struct dmar_domain *domain)
 {
-	struct dmar_drhd_unit *drhd;
 	struct page *freelist = NULL;
 	int i;
 
@@ -2558,6 +2571,10 @@ static bool device_has_rmrr(struct device *dev)
  * In both cases we assume that PCI USB devices with RMRRs have them largely
  * for historical reasons and that the RMRR space is not actively used post
  * boot.  This exclusion may change if vendors begin to abuse it.
+ *
+ * The same exception is made for graphics devices, with the requirement that
+ * any use of the RMRR regions will be torn down before assigning the device
+ * to a guest.
  */
 static bool device_is_rmrr_locked(struct device *dev)
 {
@@ -2567,7 +2584,7 @@ static bool device_is_rmrr_locked(struct device *dev)
 	if (dev_is_pci(dev)) {
 		struct pci_dev *pdev = to_pci_dev(dev);
 
-		if ((pdev->class >> 8) == PCI_CLASS_SERIAL_USB)
+		if (IS_USB_DEVICE(pdev) || IS_GFX_DEVICE(pdev))
 			return false;
 	}
 
