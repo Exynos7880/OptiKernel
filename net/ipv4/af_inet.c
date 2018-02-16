@@ -419,6 +419,8 @@ out_rcu_unlock:
 	goto out;
 }
 
+#ifdef CONFIG_KNOX_NCM
+/* START_OF_KNOX_NPA */
 /** The function is used to check if the ncm feature is enabled or not; if enabled then collect the socket meta-data information; **/
 /*static void knox_collect_metadata(struct socket *sock) {
     if(check_ncm_flag()) {
@@ -476,7 +478,9 @@ out_rcu_unlock:
             kfree(ksm);
         }
     }
-}*/
+}
+/* END_OF_KNOX_NPA */
++#endif
 
 /*
  *	The peer socket should always be NULL (or else). When we call this
