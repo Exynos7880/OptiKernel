@@ -276,9 +276,10 @@ static void simulate_LOMEM(char *arg)
 static void simulate_SOFT_LOCKUP(char *arg)
 {
 	pr_crit("%s()\n", __func__);
-	preempt_disable();
-	asm("b .");
-	preempt_enable();
+	softlockup_panic = 1;
+ 	preempt_disable();
+ 	asm("b .");
+ 	preempt_enable();
 }
 
 static void simulate_HARD_LOCKUP_handler(void *info)
